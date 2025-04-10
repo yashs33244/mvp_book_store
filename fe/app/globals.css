@@ -1,0 +1,163 @@
+@import url("https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,wght@0,200..1000;1,200..1000&family=Rammetto+One&family=Roboto:ital,wght@0,100..900;1,100..900&family=Spectral:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: 0 0% 0%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 15%;
+  --secondary-foreground: 0 0% 100%;
+  --accent: 0 0% 0%;
+  --accent-foreground: 0 0% 100%;
+  --background: 0 0% 100%;
+  --foreground: 0 0% 0%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 0%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 0%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 45%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 90%;
+  --input: 0 0% 90%;
+  --ring: 0 0% 0%;
+  --radius: 0.5rem;
+  --foreground-rgb: 0, 0, 0;
+  --background-rgb: 255, 255, 255;
+}
+
+.dark {
+  --primary: 0 0% 100%;
+  --primary-foreground: 0 0% 0%;
+  --secondary: 0 0% 85%;
+  --secondary-foreground: 0 0% 0%;
+  --accent: 0 0% 100%;
+  --accent-foreground: 0 0% 0%;
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  --card: 0 0% 5%;
+  --card-foreground: 0 0% 100%;
+  --popover: 0 0% 5%;
+  --popover-foreground: 0 0% 100%;
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 65%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 20%;
+  --input: 0 0% 20%;
+  --ring: 0 0% 100%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    border-radius: 0 !important;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: "Krona One", sans-serif;
+    color: rgb(var(--foreground-rgb));
+    background: rgb(var(--background-rgb));
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-bold tracking-tight;
+    color: var(--coffee);
+    margin-bottom: 1rem;
+  }
+  h1 {
+    @apply text-4xl md:text-5xl;
+    font-size: 2.5rem;
+    font-weight: 400;
+  }
+  h2 {
+    @apply text-3xl md:text-4xl;
+    font-size: 2rem;
+    font-weight: 400;
+  }
+  h3 {
+    @apply text-2xl md:text-3xl;
+    font-size: 1.75rem;
+    font-weight: 400;
+  }
+  h4 {
+    font-size: 1.5rem;
+    font-weight: 400;
+  }
+  h5 {
+    font-size: 1.25rem;
+    font-weight: 400;
+  }
+  h6 {
+    font-size: 1rem;
+    font-weight: 400;
+  }
+  p,
+  span,
+  div {
+    font-family: "Nunito Sans", sans-serif;
+  }
+  button,
+  a {
+    font-family: "Roboto", sans-serif;
+    @apply font-medium;
+    color: var(--coffee);
+    text-decoration: none;
+    transition: color 0.3s;
+  }
+  button,
+  a:hover {
+    color: var(--raw-umber);
+  }
+
+}
+
+@layer components {
+  .hero-gradient {
+    @apply bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-black;
+  }
+
+  .feature-card {
+    @apply border-2 border-border rounded-xl p-6 transition-all hover:shadow-lg hover:border-primary/20;
+  }
+
+  .stat-card {
+    @apply bg-muted rounded-xl p-6 flex flex-col items-center justify-center text-center;
+  }
+
+  .testimonial-card {
+    @apply bg-white dark:bg-gray-950 rounded-xl p-6 shadow-md border border-border;
+  }
+
+  .btn-primary {
+    background-color: var(--coffee);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0;
+    transition: background-color 0.3s;
+  }
+
+  .btn-primary:hover {
+    background-color: var(--raw-umber);
+  }
+
+  .card {
+    background-color: white;
+    border: 1px solid var(--dun);
+    border-radius: 0;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+
+  a:hover {
+    color: var(--raw-umber);
+  }
+}

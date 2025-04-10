@@ -1,0 +1,28 @@
+/* Krona One Font Class */
+.krona-one-regular {
+  font-family: "Krona One", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+/* Color Scheme */
+:root {
+  --almond: #ede0d4ff;
+  --dun: #e6ccb2ff;
+  --tan: #ddb892ff;
+  --chamoisee: #b08968ff;
+  --coffee: #7f5539ff;
+  --raw-umber: #9c6644ff;
+}
+
+/* Apply Krona One font to all text */
+body {
+  font-family: "Krona One", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+/* Sharp rectangles for buttons and boxes */
+.btn-primary, .card, button, input, select, textarea {
+  border-radius: 0 !important;
+} 

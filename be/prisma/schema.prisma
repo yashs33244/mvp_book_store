@@ -1,0 +1,38 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+    id        String   @id @default(uuid())
+    email     String   @unique
+    password  String
+    name      String
+    mobile    String
+    role      Role     @default(SEEKER)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    books     Book[]
+}
+
+model Book {
+    id          String   @id @default(uuid())
+    title       String
+    author      String
+    genre       String?
+    location    String
+    isAvailable Boolean  @default(true)
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+    owner       User     @relation(fields: [ownerId], references: [id])
+    ownerId     String
+}
+
+enum Role {
+    OWNER
+    SEEKER
+}
