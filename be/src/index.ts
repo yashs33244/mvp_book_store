@@ -5,11 +5,21 @@ import { userRouter } from './routes/user.routes';
 import { bookRouter } from './routes/book.routes';
 import { authRouter } from './routes/auth.routes';
 import { connectToRedis } from './config/redis.config';
+import { healthRoutes } from './routes/health.routes';
+import { errorHandler } from './middleware/error.middleware';
+
+import morgan from 'morgan';
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3001;
+
+// Security middleware
+
+
+// Logging middleware
+app.use(morgan('dev'));
 
 // Add request logging middleware
 app.use((req, res, next) => {
@@ -21,9 +31,13 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
+app.use("/api/health", healthRoutes);
 app.use('/api/auth', authRouter);
 app.use('/api/users', userRouter);
 app.use('/api/books', bookRouter);
+
+// Error handling middleware
+app.use(errorHandler);
 
 app.get('/health', (req, res) => {
   console.log('Health check requested');

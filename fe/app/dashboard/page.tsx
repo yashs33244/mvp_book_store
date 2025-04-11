@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { BookList } from "@/components/book-list";
@@ -22,7 +22,7 @@ import {
 } from "@/hooks/useBooks";
 import { Pagination } from "@/components/ui/pagination";
 
-export default function Dashboard() {
+function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: user, isLoading: isLoadingUser } = useUser();
@@ -292,5 +292,13 @@ export default function Dashboard() {
         </Tabs>
       </main>
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }
