@@ -9,7 +9,7 @@ services:
       - "3001:3001"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/bookexchange
-      - REDIS_URL=redis://redis:6370
+      - REDIS_URL=redis://redis:6379 # Using internal container name
       - JWT_SECRET=your_jwt_secret_key
       - NODE_ENV=production
       - PORT=3001
@@ -58,7 +58,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6370:6379"
+      - "6380:6379" # Host port 6380 to avoid conflict with EC2 Redis on 6379
     volumes:
       - redis-data:/data
     networks:
