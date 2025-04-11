@@ -14,13 +14,22 @@ export class CacheService{
 
     static async get<T>(key: string) : Promise<T | null >{
         try {
+            // Check if Redis client is connected
+            if (!redisClient.isOpen) {
+                console.warn('Redis client is not connected, skipping cache get');
+                return null;
+            }
+            
+            console.log('CacheService.get called with key:', key);
             const data = await redisClient.get(key);
             if(data){
+                console.log('Cache hit for key:', key);
                 return JSON.parse(data) as T;
             }
+            console.log('Cache miss for key:', key);
             return null;
         } catch (error) {
-            console.log(error);
+            console.error('Error getting from cache:', error);
             return null;
         }
     }
@@ -36,9 +45,17 @@ export class CacheService{
 
     static async set(key: string, data: any, expiration : number=  DEFAULT_EXPIRATION) : Promise<void>{
         try {
+            // Check if Redis client is connected
+            if (!redisClient.isOpen) {
+                console.warn('Redis client is not connected, skipping cache set');
+                return;
+            }
+            
+            console.log('CacheService.set called with key:', key, 'expiration:', expiration);
             await redisClient.setEx(key,expiration,JSON.stringify(data));
+            console.log('Data cached successfully for key:', key);
         } catch (error) {
-            console.log(error);
+            console.error('Error setting cache:', error);
         }
     }
 
@@ -51,9 +68,17 @@ export class CacheService{
     
     static async delete(key: string) : Promise<void>{
         try {
+            // Check if Redis client is connected
+            if (!redisClient.isOpen) {
+                console.warn('Redis client is not connected, skipping cache delete');
+                return;
+            }
+            
+            console.log('CacheService.delete called with key:', key);
             await redisClient.del(key);
+            console.log('Cache deleted for key:', key);
         } catch (error) {
-            console.log(error);
+            console.error('Error deleting from cache:', error);
         }
     }
 
@@ -64,11 +89,21 @@ export class CacheService{
     */
    static async clearPattern(pattern: string): Promise<void>{
     try {
+        // Check if Redis client is connected
+        if (!redisClient.isOpen) {
+            console.warn('Redis client is not connected, skipping cache clear pattern');
+            return;
+        }
+        
+        console.log('CacheService.clearPattern called with pattern:', pattern);
+        let count = 0;
         for await( const key of redisClient.scanIterator({MATCH: pattern, COUNT: 100})){
             await redisClient.del(key);
+            count++;
         }
+        console.log('Cleared', count, 'cache entries matching pattern:', pattern);
     } catch (error) {
-        console.log(error);
+        console.error('Error clearing cache pattern:', error);
     }
    }
 
@@ -91,7 +126,9 @@ export class CacheService{
             return `${key}:${value}`;
         }).filter(Boolean)
 
-        return `search:${keyParts.join(':')}`;
+        const key = `search:${keyParts.join(':')}`;
+        console.log('Created cache key:', key, 'from params:', JSON.stringify(params));
+        return key;
     
   }
 }

@@ -1,54 +1,74 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Search, MapPin, Tag, X } from "lucide-react"
+import type React from "react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Search, MapPin, Tag, X, Filter } from "lucide-react";
+import { SearchParams } from "@/hooks/useBooks";
 
 interface BookSearchProps {
-  onSearch: (params: { query: string; location: string; genre: string }) => void
+  onSearch: (params: SearchParams) => void;
+  initialParams?: SearchParams;
 }
 
-export function BookSearch({ onSearch }: BookSearchProps) {
-  const [searchParams, setSearchParams] = useState({
-    query: "",
-    location: "",
-    genre: "all",
-  })
+export function BookSearch({ onSearch, initialParams = {} }: BookSearchProps) {
+  const [searchParams, setSearchParams] = useState<SearchParams>({
+    query: initialParams.query || "",
+    location: initialParams.location || "",
+    genre: initialParams.genre || "all",
+    isAvailable:
+      initialParams.isAvailable !== undefined
+        ? initialParams.isAvailable
+        : true,
+  });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
+    const { name, value } = e.target;
     setSearchParams((prev) => ({
       ...prev,
       [name]: value,
-    }))
-  }
+    }));
+  };
 
   const handleGenreChange = (value: string) => {
     setSearchParams((prev) => ({
       ...prev,
       genre: value,
-    }))
-  }
+    }));
+  };
+
+  const handleAvailabilityChange = (value: string) => {
+    setSearchParams((prev) => ({
+      ...prev,
+      isAvailable: value === "true",
+    }));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSearch(searchParams)
-  }
+    e.preventDefault();
+    onSearch(searchParams);
+  };
 
   const handleReset = () => {
-    setSearchParams({
+    const resetParams = {
       query: "",
       location: "",
       genre: "all",
-    })
-    onSearch({ query: "", location: "", genre: "all" })
-  }
+      isAvailable: true,
+    };
+    setSearchParams(resetParams);
+    onSearch(resetParams);
+  };
 
   return (
     <Card className="border-2 border-border">
@@ -99,7 +119,10 @@ export function BookSearch({ onSearch }: BookSearchProps) {
               <Label htmlFor="genre" className="text-sm font-medium">
                 Genre
               </Label>
-              <Select value={searchParams.genre} onValueChange={handleGenreChange}>
+              <Select
+                value={searchParams.genre}
+                onValueChange={handleGenreChange}
+              >
                 <SelectTrigger className="w-full">
                   <div className="flex items-center">
                     <Tag className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -110,7 +133,9 @@ export function BookSearch({ onSearch }: BookSearchProps) {
                   <SelectItem value="all">All Genres</SelectItem>
                   <SelectItem value="fiction">Fiction</SelectItem>
                   <SelectItem value="non-fiction">Non-Fiction</SelectItem>
-                  <SelectItem value="science-fiction">Science Fiction</SelectItem>
+                  <SelectItem value="science-fiction">
+                    Science Fiction
+                  </SelectItem>
                   <SelectItem value="fantasy">Fantasy</SelectItem>
                   <SelectItem value="mystery">Mystery</SelectItem>
                   <SelectItem value="romance">Romance</SelectItem>
@@ -123,8 +148,36 @@ export function BookSearch({ onSearch }: BookSearchProps) {
             </div>
           </div>
 
+          <div className="mt-4 space-y-2">
+            <Label htmlFor="availability" className="text-sm font-medium">
+              Availability
+            </Label>
+            <Select
+              value={searchParams.isAvailable ? "true" : "false"}
+              onValueChange={handleAvailabilityChange}
+            >
+              <SelectTrigger className="w-full">
+                <div className="flex items-center">
+                  <Filter className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <SelectValue placeholder="Availability" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="true">Available</SelectItem>
+                <SelectItem value="false">Unavailable</SelectItem>
+                <SelectItem value="all">All</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="flex justify-end space-x-2 mt-4">
-            <Button type="button" variant="outline" size="sm" onClick={handleReset} className="flex items-center">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleReset}
+              className="flex items-center"
+            >
               <X className="mr-1 h-4 w-4" />
               Reset
             </Button>
@@ -136,5 +189,5 @@ export function BookSearch({ onSearch }: BookSearchProps) {
         </form>
       </CardContent>
     </Card>
-  )
+  );
 }

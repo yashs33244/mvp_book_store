@@ -16,19 +16,37 @@ const bookSchema = z.object({
   location: z.string().min(1),
 });
 
-
-
 // Public endpoints with caching
-router.get('/books', cacheMiddleware(300), BookController.listBooks);
-router.get('/books/:id', cacheMiddleware(300), BookController.getBook);
-router.get('/search', cacheMiddleware(300), SearchController.searchBooks);
+router.get('/', (req, res, next) => {
+  console.log('GET /api/books - Listing books with query params:', req.query);
+  cacheMiddleware(300)(req, res, next);
+}, BookController.listBooks);
+
+router.get('/:id', (req, res, next) => {
+  console.log('GET /api/books/:id - Getting book with id:', req.params.id);
+  cacheMiddleware(300)(req, res, next);
+}, BookController.getBook);
+
+router.get('/search', (req, res, next) => {
+  console.log('GET /api/books/search - Searching books with query params:', req.query);
+  cacheMiddleware(300)(req, res, next);
+}, SearchController.searchBooks);
 
 // Protected endpoints
-router.post('/books', authenticateToken, clearCache('search:*'), BookController.createBook);
-router.put('/books/:id', authenticateToken, clearCache('search:*'), BookController.updateBook);
-router.delete('/books/:id', authenticateToken, clearCache('search:*'), BookController.deleteBook);
-router.get('/users/books', authenticateToken, BookController.getUserBooks);
+router.post('/', authenticateToken, (req, res, next) => {
+  console.log('POST /api/books - Creating book with data:', req.body);
+  clearCache('search:*')(req, res, next);
+}, BookController.createBook);
 
+router.put('/:id', authenticateToken, (req, res, next) => {
+  console.log('PUT /api/books/:id - Updating book with id:', req.params.id, 'data:', req.body);
+  clearCache('search:*')(req, res, next);
+}, BookController.updateBook);
+
+router.delete('/:id', authenticateToken, (req, res, next) => {
+  console.log('DELETE /api/books/:id - Deleting book with id:', req.params.id);
+  clearCache('search:*')(req, res, next);
+}, BookController.deleteBook);
 
 // // Create a new book listing
 // router.post('/', authenticateToken, isOwner, async (req, res) => {

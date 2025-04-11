@@ -1,76 +1,79 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { BookPlus, Tag, MapPin, FileText, User, Mail } from "lucide-react"
-import type { Book } from "@/lib/types"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { BookPlus, Tag, MapPin, FileText, User, Mail } from "lucide-react";
+import type { Book } from "@/lib/types";
+import { useCreateBook } from "@/hooks/useBooks";
+import { toast } from "@/components/ui/use-toast";
 
 interface AddBookFormProps {
-  onAddBook: (book: Book) => void
-  ownerId: string
-  ownerName: string
-  ownerContact: string
+  onSuccess?: () => void;
 }
 
-export function AddBookForm({ onAddBook, ownerId, ownerName, ownerContact }: AddBookFormProps) {
+export function AddBookForm({ onSuccess }: AddBookFormProps) {
   const [formData, setFormData] = useState({
     title: "",
     author: "",
     genre: "",
     location: "",
-    description: "",
-  })
+    contactInfo: "",
+  });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
+  const createBook = useCreateBook();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await createBook.mutateAsync(formData);
+      toast({
+        title: "Success",
+        description: "Book added successfully!",
+      });
+      setFormData({
+        title: "",
+        author: "",
+        genre: "",
+        location: "",
+        contactInfo: "",
+      });
+      onSuccess?.();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add book. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
-    }))
-  }
+    }));
+  };
 
   const handleGenreChange = (value: string) => {
     setFormData((prev) => ({
       ...prev,
       genre: value,
-    }))
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-
-    const newBook: Book = {
-      id: Date.now().toString(),
-      title: formData.title,
-      author: formData.author,
-      genre: formData.genre,
-      location: formData.location,
-      description: formData.description,
-      ownerId,
-      ownerName,
-      ownerContact,
-      isAvailable: true,
-      createdAt: new Date().toISOString(),
-    }
-
-    onAddBook(newBook)
-
-    // Reset form
-    setFormData({
-      title: "",
-      author: "",
-      genre: "",
-      location: "",
-      description: "",
-    })
-  }
+    }));
+  };
 
   return (
     <Card className="border-2 border-primary/20">
@@ -87,14 +90,26 @@ export function AddBookForm({ onAddBook, ownerId, ownerName, ownerContact }: Add
               <Label htmlFor="title" className="text-sm font-medium">
                 Book Title *
               </Label>
-              <Input id="title" name="title" value={formData.title} onChange={handleChange} required />
+              <Input
+                id="title"
+                name="title"
+                value={formData.title}
+                onChange={handleChange}
+                required
+              />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="author" className="text-sm font-medium">
                 Author *
               </Label>
-              <Input id="author" name="author" value={formData.author} onChange={handleChange} required />
+              <Input
+                id="author"
+                name="author"
+                value={formData.author}
+                onChange={handleChange}
+                required
+              />
             </div>
           </div>
 
@@ -113,7 +128,9 @@ export function AddBookForm({ onAddBook, ownerId, ownerName, ownerContact }: Add
                 <SelectContent>
                   <SelectItem value="fiction">Fiction</SelectItem>
                   <SelectItem value="non-fiction">Non-Fiction</SelectItem>
-                  <SelectItem value="science-fiction">Science Fiction</SelectItem>
+                  <SelectItem value="science-fiction">
+                    Science Fiction
+                  </SelectItem>
                   <SelectItem value="fantasy">Fantasy</SelectItem>
                   <SelectItem value="mystery">Mystery</SelectItem>
                   <SelectItem value="romance">Romance</SelectItem>
@@ -145,35 +162,17 @@ export function AddBookForm({ onAddBook, ownerId, ownerName, ownerContact }: Add
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-sm font-medium">
-              Description
+            <Label htmlFor="contactInfo" className="text-sm font-medium">
+              Contact Information *
             </Label>
-            <div className="relative">
-              <FileText className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Textarea
-                id="description"
-                name="description"
-                placeholder="Brief description of the book, its condition, etc."
-                value={formData.description}
-                onChange={handleChange}
-                className="pl-9 min-h-[100px]"
-                rows={3}
-              />
-            </div>
-          </div>
-
-          <div className="bg-muted/30 p-3 rounded-md border border-border">
-            <h4 className="text-sm font-medium mb-2">Owner Information</h4>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center text-sm">
-                <User className="mr-2 h-4 w-4 text-muted-foreground" />
-                <span>{ownerName}</span>
-              </div>
-              <div className="flex items-center text-sm">
-                <Mail className="mr-2 h-4 w-4 text-muted-foreground" />
-                <span>{ownerContact}</span>
-              </div>
-            </div>
+            <Input
+              id="contactInfo"
+              name="contactInfo"
+              value={formData.contactInfo}
+              onChange={handleChange}
+              placeholder="Phone number or email"
+              required
+            />
           </div>
 
           <div className="flex justify-end">
@@ -185,5 +184,5 @@ export function AddBookForm({ onAddBook, ownerId, ownerName, ownerContact }: Add
         </form>
       </CardContent>
     </Card>
-  )
+  );
 }

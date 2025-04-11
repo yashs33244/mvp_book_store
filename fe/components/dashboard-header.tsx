@@ -150,7 +150,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
             >
               Browse Books
             </Link>
-            {user.role === "owner" && (
+            {user.role === "OWNER" && (
               <Link
                 href="/dashboard?tab=manage"
                 className="block px-3 py-2 rounded-md text-base font-medium text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-900 font-body"
