@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Pass build-time arguments
+        NEXT_PUBLIC_API_URL: https://apibooks.yashprojects.online
+        NODE_ENV: production
+    ports:
+      - "3000:3000"
+    environment:
+      # Runtime environment variables
+      - NEXT_PUBLIC_API_URL=https://apibooks.yashprojects.online
+      - NODE_ENV=production
+    networks:
+      - frontend-network
+    container_name: bookexchange-frontend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  frontend-network:
+    driver: bridge

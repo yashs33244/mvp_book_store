@@ -2,9 +2,7 @@
 const nextConfig = {
   output: 'standalone',
   experimental: {
-    serverActions: {
-      allowedOrigins: ['books.yashprojects.online', 'localhost:3000'],
-    },
+    serverActions: true,
   },
   images: {
     domains: [
