@@ -5,9 +5,14 @@ services:
     build:
       context: ./fe
       dockerfile: Dockerfile
+      args:
+        # Pass build-time arguments
+        NEXT_PUBLIC_API_URL: https://apibooks.yashprojects.online
+        NODE_ENV: production
     ports:
       - "3000:3000"
     environment:
+      # Runtime environment variables
       - NEXT_PUBLIC_API_URL=https://apibooks.yashprojects.online
       - NODE_ENV=production
     depends_on:
@@ -34,6 +39,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=your_aws_secret_key
       - AWS_REGION=your_aws_region
       - AWS_S3_BUCKET=your_s3_bucket_name
+      # Add environment variables for CORS
       - CORS_ALLOWED_ORIGIN=https://books.yashprojects.online
     depends_on:
       db:

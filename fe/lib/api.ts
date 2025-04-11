@@ -1,6 +1,18 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://apibooks.yashprojects.online';
+// Force production URL if we're in production environment
+const getApiUrl = () => {
+  // In development mode, use localhost
+  if (process.env.NODE_ENV === 'development') {
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  }
+  // In production, always use the production URL
+  return 'https://apibooks.yashprojects.online';
+};
+
+const API_URL = getApiUrl();
+
+console.log('API URL being used:', API_URL);
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -17,6 +29,7 @@ if (typeof window !== 'undefined') {
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    console.log(`API Request to: ${config.baseURL}${config.url}`);
     return config;
   });
 
@@ -24,6 +37,7 @@ if (typeof window !== 'undefined') {
   api.interceptors.response.use(
     (response) => response,
     (error) => {
+      console.error('API Error:', error.response?.status, error.message, error.config?.url);
       if (error.response?.status === 401) {
         // Handle unauthorized access
         localStorage.removeItem('token');

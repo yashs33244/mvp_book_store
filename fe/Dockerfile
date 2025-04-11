@@ -15,8 +15,19 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Set environment variables
-ENV NEXT_TELEMETRY_DISABLED 1
-ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Accept build arguments
+ARG NEXT_PUBLIC_API_URL=https://apibooks.yashprojects.online
+ARG NODE_ENV=production
+
+# Set environment variables from build args
+ENV NODE_ENV=${NODE_ENV}
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
+# Output environment variables for debugging
+RUN echo "Building with NODE_ENV: ${NODE_ENV}"
+RUN echo "Building with NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}"
 
 # Build the application
 RUN bun run build
@@ -25,8 +36,13 @@ RUN bun run build
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+# Set runtime environment variables
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Accept build arguments again for runtime
+ARG NEXT_PUBLIC_API_URL=https://apibooks.yashprojects.online
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -47,7 +63,8 @@ USER nextjs
 
 EXPOSE 3000
 
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
-CMD ["bun", "server.js"] 
+# Print environment variables for debugging
+CMD ["sh", "-c", "echo Running with NEXT_PUBLIC_API_URL: $NEXT_PUBLIC_API_URL && bun server.js"] 
