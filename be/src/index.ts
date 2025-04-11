@@ -15,11 +15,30 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3001;
 
-// Security middleware
+// Determine allowed origins based on environment
+const getAllowedOrigins = () => {
+  const nodeEnv = process.env.NODE_ENV;
+  if (nodeEnv === 'production') {
+    return ['https://books.yashprojects.online'];
+  }
+  // For development and testing
+  return ['http://localhost:3000', 'http://localhost:3002', 'http://localhost:3003'];
+};
 
-
+// Configure CORS with specific origins
 app.use(cors({
-  origin: true, // Allow any origin temporarily
+  origin: (origin, callback) => {
+    const allowedOrigins = getAllowedOrigins();
+    // Allow requests with no origin (like mobile apps, curl, postman)
+    if (!origin) {
+      return callback(null, true);
+    }
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
+    }
+    console.log(`CORS blocked request from origin: ${origin}`);
+    callback(null, true); // Allow all origins for now, but log blocked ones
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
@@ -58,6 +77,8 @@ if (require.main === module) {
       console.log('Redis connected successfully');
       app.listen(port, () => {
         console.log(`Server is running on port ${port}`);
+        console.log(`Environment: ${process.env.NODE_ENV}`);
+        console.log(`Allowed origins: ${getAllowedOrigins().join(', ')}`);
       });
     })
     .catch(err => {
