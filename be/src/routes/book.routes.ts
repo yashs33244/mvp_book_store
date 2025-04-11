@@ -5,6 +5,7 @@ import { authenticateToken, isOwner } from '../middleware/auth.middleware';
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware';
 import { BookController } from '../controllers/book.controller';
 import { SearchController } from '../controllers/search.controller';
+import { S3Service } from '../services/s3.service';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -14,6 +15,27 @@ const bookSchema = z.object({
   author: z.string().min(1),
   genre: z.string().optional(),
   location: z.string().min(1),
+  imageUrl: z.string().optional(),
+  imageKey: z.string().optional(),
+});
+
+// Initialize S3 service
+S3Service.initialize();
+
+// Get presigned URL for image upload
+router.post('/upload-url', authenticateToken, async (req, res) => {
+  try {
+    const { fileType } = req.body;
+    if (!fileType) {
+      return res.status(400).json({ message: 'File type is required' });
+    }
+
+    const { uploadUrl, key } = await S3Service.generateUploadUrl(fileType);
+    res.json({ uploadUrl, key });
+  } catch (error) {
+    console.error('Error generating upload URL:', error);
+    res.status(500).json({ message: 'Error generating upload URL' });
+  }
 });
 
 // Public endpoints with caching

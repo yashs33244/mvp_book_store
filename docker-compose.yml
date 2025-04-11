@@ -28,6 +28,10 @@ services:
       - JWT_SECRET=your_jwt_secret_key
       - NODE_ENV=production
       - PORT=3001
+      - AWS_ACCESS_KEY_ID=your_aws_access_key
+      - AWS_SECRET_ACCESS_KEY=your_aws_secret_key
+      - AWS_REGION=your_aws_region
+      - AWS_S3_BUCKET=your_s3_bucket_name
     depends_on:
       db:
         condition: service_healthy

@@ -11,7 +11,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BookController = void 0;
-const book_service_1 = require("../services/book.service");
+const client_1 = require("@prisma/client");
+const zod_1 = require("zod");
+const prisma = new client_1.PrismaClient();
+const bookSchema = zod_1.z.object({
+    title: zod_1.z.string().min(1),
+    author: zod_1.z.string().min(1),
+    genre: zod_1.z.string().optional(),
+    location: zod_1.z.string().min(1),
+    imageUrl: zod_1.z.string().optional(),
+    imageKey: zod_1.z.string().optional(),
+});
 class BookController {
     /**
      * Get all books with filtering
@@ -19,12 +29,32 @@ class BookController {
     static listBooks(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const books = yield book_service_1.BookService.getBooks(req.query);
-                res.status(200).json(books);
+                const { title, location, genre } = req.query;
+                const where = {};
+                if (title)
+                    where.title = { contains: title, mode: 'insensitive' };
+                if (location)
+                    where.location = { contains: location, mode: 'insensitive' };
+                if (genre)
+                    where.genre = { contains: genre, mode: 'insensitive' };
+                const books = yield prisma.book.findMany({
+                    where,
+                    include: {
+                        owner: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                mobile: true,
+                            },
+                        },
+                    },
+                });
+                res.json(books);
             }
             catch (error) {
                 console.error('Error listing books:', error);
-                res.status(500).json({ message: 'Failed to retrieve books' });
+                res.status(500).json({ message: 'Internal server error' });
             }
         });
     }
@@ -34,19 +64,27 @@ class BookController {
     static getBook(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const id = req.params.id;
-                if (!id) {
-                    return res.status(400).json({ message: 'Invalid book ID' });
-                }
-                const book = yield book_service_1.BookService.getBookById(id);
+                const book = yield prisma.book.findUnique({
+                    where: { id: req.params.id },
+                    include: {
+                        owner: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                mobile: true,
+                            },
+                        },
+                    },
+                });
                 if (!book) {
                     return res.status(404).json({ message: 'Book not found' });
                 }
-                res.status(200).json(book);
+                res.json(book);
             }
             catch (error) {
                 console.error('Error getting book:', error);
-                res.status(500).json({ message: 'Failed to retrieve book' });
+                res.status(500).json({ message: 'Internal server error' });
             }
         });
     }
@@ -56,27 +94,26 @@ class BookController {
     static createBook(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const { title, author, genre, location, coverImageUrl, contactInfo } = req.body;
-                const userId = req.user.id; // From auth middleware
-                // Validate required fields
-                if (!title || !author || !location || !contactInfo) {
-                    return res.status(400).json({
-                        message: 'Required fields missing: title, author, location, and contactInfo are required'
-                    });
-                }
-                const book = yield book_service_1.BookService.createBook({
-                    title,
-                    author,
-                    genre,
-                    location,
-                    isAvailable: true,
-                    owner: { connect: { id: userId } }
+                const { title, author, genre, location, imageUrl, imageKey } = bookSchema.parse(req.body);
+                const book = yield prisma.book.create({
+                    data: {
+                        title,
+                        author,
+                        genre,
+                        location,
+                        imageUrl,
+                        imageKey,
+                        ownerId: req.user.id,
+                    },
                 });
                 res.status(201).json(book);
             }
             catch (error) {
+                if (error instanceof zod_1.z.ZodError) {
+                    return res.status(400).json({ message: error.errors });
+                }
                 console.error('Error creating book:', error);
-                res.status(500).json({ message: 'Failed to create book' });
+                res.status(500).json({ message: 'Internal server error' });
             }
         });
     }
@@ -86,26 +123,33 @@ class BookController {
     static updateBook(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const id = req.params.id;
-                const userId = req.user.id; // From auth middleware
-                if (!id) {
-                    return res.status(400).json({ message: 'Invalid book ID' });
-                }
-                // Check if book exists and belongs to user
-                const existingBook = yield book_service_1.BookService.getBookById(id);
-                if (!existingBook) {
+                const { title, author, genre, location, isAvailable, imageUrl, imageKey } = req.body;
+                const book = yield prisma.book.findUnique({
+                    where: { id: req.params.id },
+                });
+                if (!book) {
                     return res.status(404).json({ message: 'Book not found' });
                 }
-                if (existingBook.ownerId !== userId) {
-                    return res.status(403).json({ message: 'You do not have permission to update this book' });
+                if (book.ownerId !== req.user.id) {
+                    return res.status(403).json({ message: 'Not authorized to update this book' });
                 }
-                const { title, author, genre, location, coverImageUrl, contactInfo, isAvailable } = req.body;
-                const updatedBook = yield book_service_1.BookService.updateBook(id, Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (title && { title })), (author && { author })), (genre !== undefined && { genre })), (location && { location })), (coverImageUrl !== undefined && { coverImageUrl })), (contactInfo && { contactInfo })), (isAvailable !== undefined && { isAvailable })));
-                res.status(200).json(updatedBook);
+                const updatedBook = yield prisma.book.update({
+                    where: { id: req.params.id },
+                    data: {
+                        title,
+                        author,
+                        genre,
+                        location,
+                        isAvailable,
+                        imageUrl,
+                        imageKey,
+                    },
+                });
+                res.json(updatedBook);
             }
             catch (error) {
                 console.error('Error updating book:', error);
-                res.status(500).json({ message: 'Failed to update book' });
+                res.status(500).json({ message: 'Internal server error' });
             }
         });
     }
@@ -115,25 +159,23 @@ class BookController {
     static deleteBook(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const id = req.params.id;
-                const userId = req.user.id; // From auth middleware
-                if (!id) {
-                    return res.status(400).json({ message: 'Invalid book ID' });
-                }
-                // Check if book exists and belongs to user
-                const existingBook = yield book_service_1.BookService.getBookById(id);
-                if (!existingBook) {
+                const book = yield prisma.book.findUnique({
+                    where: { id: req.params.id },
+                });
+                if (!book) {
                     return res.status(404).json({ message: 'Book not found' });
                 }
-                if (existingBook.ownerId !== userId) {
-                    return res.status(403).json({ message: 'You do not have permission to delete this book' });
+                if (book.ownerId !== req.user.id) {
+                    return res.status(403).json({ message: 'Not authorized to delete this book' });
                 }
-                yield book_service_1.BookService.deleteBook(id);
-                res.status(200).json({ message: 'Book deleted successfully' });
+                yield prisma.book.delete({
+                    where: { id: req.params.id },
+                });
+                res.status(204).send();
             }
             catch (error) {
                 console.error('Error deleting book:', error);
-                res.status(500).json({ message: 'Failed to delete book' });
+                res.status(500).json({ message: 'Internal server error' });
             }
         });
     }
@@ -144,7 +186,19 @@ class BookController {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const userId = req.user.id; // From auth middleware
-                const books = yield book_service_1.BookService.getBooksByOwner(userId);
+                const books = yield prisma.book.findMany({
+                    where: { ownerId: userId },
+                    include: {
+                        owner: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                mobile: true,
+                            },
+                        },
+                    },
+                });
                 res.status(200).json({ books });
             }
             catch (error) {

@@ -11,10 +11,16 @@ const user_routes_1 = require("./routes/user.routes");
 const book_routes_1 = require("./routes/book.routes");
 const auth_routes_1 = require("./routes/auth.routes");
 const redis_config_1 = require("./config/redis.config");
+const health_routes_1 = require("./routes/health.routes");
+const error_middleware_1 = require("./middleware/error.middleware");
+const morgan_1 = __importDefault(require("morgan"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 exports.app = app;
 const port = process.env.PORT || 3001;
+// Security middleware
+// Logging middleware
+app.use((0, morgan_1.default)('dev'));
 // Add request logging middleware
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
@@ -23,9 +29,12 @@ app.use((req, res, next) => {
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
 // Routes
+app.use("/api/health", health_routes_1.healthRoutes);
 app.use('/api/auth', auth_routes_1.authRouter);
 app.use('/api/users', user_routes_1.userRouter);
 app.use('/api/books', book_routes_1.bookRouter);
+// Error handling middleware
+app.use(error_middleware_1.errorHandler);
 app.get('/health', (req, res) => {
     console.log('Health check requested');
     res.json({ status: 'ok' });
