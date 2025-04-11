@@ -13,10 +13,10 @@ services:
       - JWT_SECRET=your_jwt_secret_key
       - NODE_ENV=production
       - PORT=3001
-      - AWS_ACCESS_KEY_ID=your_aws_access_key
-      - AWS_SECRET_ACCESS_KEY=your_aws_secret_key
-      - AWS_REGION=your_aws_region
-      - AWS_BUCKET_NAME=studentimagess
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_BUCKET_NAME=${AWS_BUCKET_NAME}
       - CORS_ALLOWED_ORIGIN=https://books.yashprojects.online
     depends_on:
       db:
