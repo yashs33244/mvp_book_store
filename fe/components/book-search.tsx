@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,22 +21,29 @@ interface BookSearchProps {
   initialParams?: SearchParams;
 }
 
-export function BookSearch({ onSearch, initialParams = {} }: BookSearchProps) {
-  const [searchParams, setSearchParams] = useState<SearchParams>({
-    query: initialParams.query || "",
-    location: initialParams.location || "",
-    genre: initialParams.genre || "all",
-    isAvailable:
-      initialParams.isAvailable !== undefined
-        ? initialParams.isAvailable
-        : true,
-  });
+export function BookSearch({
+  onSearch,
+  initialParams = {
+    page: 1,
+    limit: 10,
+    isAvailable: true,
+  },
+}: BookSearchProps) {
+  const [searchParams, setSearchParams] = useState<SearchParams>(initialParams);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Update local state when initialParams change (e.g., from URL)
+  useEffect(() => {
+    setSearchParams(initialParams);
+  }, [initialParams]);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
     setSearchParams((prev) => ({
       ...prev,
       [name]: value,
+      page: 1, // Reset to first page on filter change
     }));
   };
 
@@ -50,7 +57,7 @@ export function BookSearch({ onSearch, initialParams = {} }: BookSearchProps) {
   const handleAvailabilityChange = (value: string) => {
     setSearchParams((prev) => ({
       ...prev,
-      isAvailable: value === "true",
+      isAvailable: value === "all" ? undefined : value === "true",
     }));
   };
 
@@ -165,7 +172,6 @@ export function BookSearch({ onSearch, initialParams = {} }: BookSearchProps) {
               <SelectContent>
                 <SelectItem value="true">Available</SelectItem>
                 <SelectItem value="false">Unavailable</SelectItem>
-                <SelectItem value="all">All</SelectItem>
               </SelectContent>
             </Select>
           </div>

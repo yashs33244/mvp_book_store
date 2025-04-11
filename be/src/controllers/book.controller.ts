@@ -22,7 +22,7 @@ export class BookController {
    */
   static async getBook(req: Request, res: Response) {
     try {
-      const id = JSON.stringify(req.params.id);
+      const id = req.params.id;
       
       if (!id) {
         return res.status(400).json({ message: 'Invalid book ID' });
@@ -77,10 +77,10 @@ export class BookController {
    */
   static async updateBook(req: Request, res: Response) {
     try {
-      const id = JSON.stringify(req.params.id);
+      const id = req.params.id;
       const userId = (req as any).user.id; // From auth middleware
       
-      if (!(id)) {
+      if (!id) {
         return res.status(400).json({ message: 'Invalid book ID' });
       }
       
@@ -119,10 +119,10 @@ export class BookController {
    */
   static async deleteBook(req: Request, res: Response) {
     try {
-      const id = JSON.stringify(req.params.id);
+      const id = req.params.id;
       const userId = (req as any).user.id; // From auth middleware
       
-      if (!(id)) {
+      if (!id) {
         return res.status(400).json({ message: 'Invalid book ID' });
       }
       

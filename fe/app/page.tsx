@@ -1,4 +1,9 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import Navbar from "@/app/components/Navbar";
 import { Button } from "@/components/ui/button";
+import { useUser } from "@/hooks/useAuth";
 import {
   Card,
   CardContent,
@@ -15,13 +20,16 @@ import { Stats } from "@/components/stats";
 import { FaqSection } from "@/components/faq-section";
 
 export default function Home() {
+  const router = useRouter();
+  const { data: user } = useUser();
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Hero Section */}
       <section className="hero-gradient py-20 md:py-32">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-4xl md:text-6xl  mb-6 text-black dark:text-white">
+            <h1 className="text-4xl md:text-6xl mb-6 text-black dark:text-white">
               Connect with readers in your community
             </h1>
             <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto font-sans">
@@ -29,24 +37,37 @@ export default function Home() {
               our peer-to-peer book exchange platform.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/register?role=owner">
+              {user ? (
                 <Button
                   size="lg"
                   className="w-full sm:w-auto bg-black text-white dark:bg-white dark:text-black font-body"
+                  onClick={() => router.push("/dashboard")}
                 >
-                  Share Your Books
+                  Go to Dashboard
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-              </Link>
-              <Link href="/register?role=seeker">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="w-full sm:w-auto font-body"
-                >
-                  Find Books to Borrow
-                </Button>
-              </Link>
+              ) : (
+                <>
+                  <Link href="/register?role=owner">
+                    <Button
+                      size="lg"
+                      className="w-full sm:w-auto bg-black text-white dark:bg-white dark:text-black font-body"
+                    >
+                      Share Your Books
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/register?role=seeker">
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      className="w-full sm:w-auto font-body"
+                    >
+                      Find Books to Borrow
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -84,7 +105,7 @@ export default function Home() {
             <Card className="border-2 border-border shadow-sm">
               <CardHeader className="text-center pb-2">
                 <div className="w-12 h-12 bg-gray-100 dark:bg-gray-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-black dark:text-white  text-xl">2</span>
+                  <span className="text-black dark:text-white text-xl">2</span>
                 </div>
                 <CardTitle className="text-xl font-serif">
                   Connect with Others
@@ -243,7 +264,7 @@ export default function Home() {
       {/* CTA Section */}
       <section className="py-20 bg-black text-white dark:bg-white dark:text-black">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl  mb-6">
+          <h2 className="text-3xl md:text-4xl mb-6">
             Ready to start exchanging books?
           </h2>
           <p className="text-xl mb-10 max-w-2xl mx-auto opacity-90 font-sans">
@@ -251,24 +272,37 @@ export default function Home() {
             area.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/register">
+            {user ? (
               <Button
                 size="lg"
                 variant="outline"
                 className="w-full sm:w-auto bg-white text-black dark:bg-black dark:text-white border-white dark:border-black font-body"
+                onClick={() => router.push("/dashboard")}
               >
-                Create a Free Account
+                Go to Dashboard
               </Button>
-            </Link>
-            <Link href="/login">
-              <Button
-                size="lg"
-                variant="outline"
-                className="w-full sm:w-auto bg-transparent border-white text-white hover:bg-white/10 dark:border-black dark:text-black dark:hover:bg-black/10 font-body"
-              >
-                Log In
-              </Button>
-            </Link>
+            ) : (
+              <>
+                <Link href="/register">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="w-full sm:w-auto bg-white text-black dark:bg-black dark:text-white border-white dark:border-black font-body"
+                  >
+                    Create a Free Account
+                  </Button>
+                </Link>
+                <Link href="/login">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="w-full sm:w-auto bg-transparent border-white text-white hover:bg-white/10 dark:border-black dark:text-black dark:hover:bg-black/10 font-body"
+                  >
+                    Log In
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </section>

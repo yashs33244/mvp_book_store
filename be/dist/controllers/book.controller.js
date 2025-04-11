@@ -34,7 +34,7 @@ class BookController {
     static getBook(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const id = JSON.stringify(req.params.id);
+                const id = req.params.id;
                 if (!id) {
                     return res.status(400).json({ message: 'Invalid book ID' });
                 }
@@ -86,9 +86,9 @@ class BookController {
     static updateBook(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const id = JSON.stringify(req.params.id);
+                const id = req.params.id;
                 const userId = req.user.id; // From auth middleware
-                if (!(id)) {
+                if (!id) {
                     return res.status(400).json({ message: 'Invalid book ID' });
                 }
                 // Check if book exists and belongs to user
@@ -115,9 +115,9 @@ class BookController {
     static deleteBook(req, res) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const id = JSON.stringify(req.params.id);
+                const id = req.params.id;
                 const userId = req.user.id; // From auth middleware
-                if (!(id)) {
+                if (!id) {
                     return res.status(400).json({ message: 'Invalid book ID' });
                 }
                 // Check if book exists and belongs to user

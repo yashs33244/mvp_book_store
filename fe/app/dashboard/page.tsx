@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { DashboardHeader } from "@/components/dashboard-header";
+import { useRouter, useSearchParams } from "next/navigation";
+
 import { BookList } from "@/components/book-list";
 import { AddBookForm } from "@/components/add-book-form";
 import { Button } from "@/components/ui/button";
@@ -24,14 +24,17 @@ import { Pagination } from "@/components/ui/pagination";
 
 export default function Dashboard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: user, isLoading: isLoadingUser } = useUser();
-  const [searchParams, setSearchParams] = useState<SearchParams>({
+  const [searchParamsState, setSearchParamsState] = useState<SearchParams>({
     page: 1,
     limit: 10,
     isAvailable: true,
+    query: searchParams.get("query") || "",
   });
 
-  const { data: booksData, isLoading: isLoadingBooks } = useBooks(searchParams);
+  const { data: booksData, isLoading: isLoadingBooks } =
+    useBooks(searchParamsState);
   const books = booksData?.books || [];
   const pagination = booksData?.pagination;
 
@@ -46,15 +49,27 @@ export default function Dashboard() {
     }
   }, [user, isLoadingUser, router]);
 
+  useEffect(() => {
+    // Update search params when URL query changes
+    const query = searchParams.get("query");
+    if (query !== searchParamsState.query) {
+      setSearchParamsState((prev) => ({
+        ...prev,
+        query: query || "",
+        page: 1, // Reset to first page on new search
+      }));
+    }
+  }, [searchParams, searchParamsState.query]);
+
   const handleSearch = (params: SearchParams) => {
-    setSearchParams({
+    setSearchParamsState({
       ...params,
       page: 1, // Reset to first page on new search
     });
   };
 
   const handlePageChange = (page: number) => {
-    setSearchParams((prev) => ({
+    setSearchParamsState((prev) => ({
       ...prev,
       page,
     }));
@@ -62,11 +77,14 @@ export default function Dashboard() {
 
   const handleAddBook = async (newBook: Book) => {
     try {
+      if (!user) return; // Early return if user is not available
+
       await createBook.mutateAsync({
         title: newBook.title,
         author: newBook.author,
         genre: newBook.genre,
         location: newBook.location,
+        contactInfo: user.email,
       });
       setShowAddForm(false);
       toast({
@@ -121,6 +139,17 @@ export default function Dashboard() {
     }
   };
 
+  const handleResetSearch = () => {
+    setSearchParamsState({
+      page: 1,
+      limit: 10,
+      isAvailable: true,
+      query: "",
+    });
+    // Clear the URL query parameter
+    router.push("/dashboard");
+  };
+
   if (isLoadingUser || !user) {
     return <div className="p-8 text-center">Loading...</div>;
   }
@@ -130,7 +159,6 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <Toaster />
-      <DashboardHeader user={user} />
 
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="browse" className="w-full">
@@ -148,7 +176,36 @@ export default function Dashboard() {
           </TabsList>
 
           <TabsContent value="browse" className="space-y-6">
-            <BookSearch onSearch={handleSearch} initialParams={searchParams} />
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Search Books</h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleResetSearch}
+                className="flex items-center"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="mr-2"
+                >
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                  <path d="M3 3v5h5"></path>
+                </svg>
+                Reset Search
+              </Button>
+            </div>
+            <BookSearch
+              onSearch={handleSearch}
+              initialParams={searchParamsState}
+            />
 
             <div className="mt-8">
               <h2 className="text-2xl font-semibold mb-4 flex items-center">
@@ -167,13 +224,7 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <>
-                  <BookList
-                    books={books}
-                    currentUser={user}
-                    onToggleStatus={handleToggleStatus}
-                    onDeleteBook={handleDeleteBook}
-                    viewMode="browse"
-                  />
+                  <BookList books={books} currentUser={user} viewMode="grid" />
 
                   {pagination && pagination.totalPages > 1 && (
                     <div className="mt-6 flex justify-center">
@@ -213,10 +264,13 @@ export default function Dashboard() {
 
               {showAddForm && (
                 <AddBookForm
-                  onAddBook={handleAddBook}
-                  ownerId={user.id}
-                  ownerName={user.name}
-                  ownerContact={user.email}
+                  onSuccess={() => {
+                    setShowAddForm(false);
+                    toast({
+                      title: "Success",
+                      description: "Book added successfully!",
+                    });
+                  }}
                 />
               )}
 
@@ -230,9 +284,7 @@ export default function Dashboard() {
                 <BookList
                   books={userBooks}
                   currentUser={user}
-                  onToggleStatus={handleToggleStatus}
-                  onDeleteBook={handleDeleteBook}
-                  viewMode="manage"
+                  viewMode="grid"
                 />
               )}
             </TabsContent>
