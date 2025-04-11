@@ -1,19 +1,13 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.bookRouter = void 0;
 const express_1 = require("express");
 const client_1 = require("@prisma/client");
 const zod_1 = require("zod");
 const auth_middleware_1 = require("../middleware/auth.middleware");
+const cache_middleware_1 = require("../middleware/cache.middleware");
+const book_controller_1 = require("../controllers/book.controller");
+const search_controller_1 = require("../controllers/search.controller");
 const router = (0, express_1.Router)();
 exports.bookRouter = router;
 const prisma = new client_1.PrismaClient();
@@ -23,130 +17,29 @@ const bookSchema = zod_1.z.object({
     genre: zod_1.z.string().optional(),
     location: zod_1.z.string().min(1),
 });
-// Create a new book listing
-router.post('/', auth_middleware_1.authenticateToken, auth_middleware_1.isOwner, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { title, author, genre, location } = bookSchema.parse(req.body);
-        const book = yield prisma.book.create({
-            data: {
-                title,
-                author,
-                genre,
-                location,
-                ownerId: req.user.id,
-            },
-        });
-        res.status(201).json(book);
-    }
-    catch (error) {
-        if (error instanceof zod_1.z.ZodError) {
-            return res.status(400).json({ message: error.errors });
-        }
-        res.status(500).json({ message: 'Internal server error' });
-    }
-}));
-// Get all books
-router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { title, location, genre } = req.query;
-        const where = {};
-        if (title)
-            where.title = { contains: title, mode: 'insensitive' };
-        if (location)
-            where.location = { contains: location, mode: 'insensitive' };
-        if (genre)
-            where.genre = { contains: genre, mode: 'insensitive' };
-        const books = yield prisma.book.findMany({
-            where,
-            include: {
-                owner: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                        mobile: true,
-                    },
-                },
-            },
-        });
-        res.json(books);
-    }
-    catch (error) {
-        res.status(500).json({ message: 'Internal server error' });
-    }
-}));
-// Get a specific book
-router.get('/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const book = yield prisma.book.findUnique({
-            where: { id: req.params.id },
-            include: {
-                owner: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                        mobile: true,
-                    },
-                },
-            },
-        });
-        if (!book) {
-            return res.status(404).json({ message: 'Book not found' });
-        }
-        res.json(book);
-    }
-    catch (error) {
-        res.status(500).json({ message: 'Internal server error' });
-    }
-}));
-// Update a book
-router.put('/:id', auth_middleware_1.authenticateToken, auth_middleware_1.isOwner, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { title, author, genre, location, isAvailable } = req.body;
-        const book = yield prisma.book.findUnique({
-            where: { id: req.params.id },
-        });
-        if (!book) {
-            return res.status(404).json({ message: 'Book not found' });
-        }
-        if (book.ownerId !== req.user.id) {
-            return res.status(403).json({ message: 'Not authorized to update this book' });
-        }
-        const updatedBook = yield prisma.book.update({
-            where: { id: req.params.id },
-            data: {
-                title,
-                author,
-                genre,
-                location,
-                isAvailable,
-            },
-        });
-        res.json(updatedBook);
-    }
-    catch (error) {
-        res.status(500).json({ message: 'Internal server error' });
-    }
-}));
-// Delete a book
-router.delete('/:id', auth_middleware_1.authenticateToken, auth_middleware_1.isOwner, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const book = yield prisma.book.findUnique({
-            where: { id: req.params.id },
-        });
-        if (!book) {
-            return res.status(404).json({ message: 'Book not found' });
-        }
-        if (book.ownerId !== req.user.id) {
-            return res.status(403).json({ message: 'Not authorized to delete this book' });
-        }
-        yield prisma.book.delete({
-            where: { id: req.params.id },
-        });
-        res.status(204).send();
-    }
-    catch (error) {
-        res.status(500).json({ message: 'Internal server error' });
-    }
-}));
+// Public endpoints with caching
+router.get('/', (req, res, next) => {
+    console.log('GET /api/books - Listing books with query params:', req.query);
+    (0, cache_middleware_1.cacheMiddleware)(300)(req, res, next);
+}, book_controller_1.BookController.listBooks);
+router.get('/:id', (req, res, next) => {
+    console.log('GET /api/books/:id - Getting book with id:', req.params.id);
+    (0, cache_middleware_1.cacheMiddleware)(300)(req, res, next);
+}, book_controller_1.BookController.getBook);
+router.get('/search', (req, res, next) => {
+    console.log('GET /api/books/search - Searching books with query params:', req.query);
+    (0, cache_middleware_1.cacheMiddleware)(300)(req, res, next);
+}, search_controller_1.SearchController.searchBooks);
+// Protected endpoints
+router.post('/', auth_middleware_1.authenticateToken, (req, res, next) => {
+    console.log('POST /api/books - Creating book with data:', req.body);
+    (0, cache_middleware_1.clearCache)('search:*')(req, res, next);
+}, book_controller_1.BookController.createBook);
+router.put('/:id', auth_middleware_1.authenticateToken, (req, res, next) => {
+    console.log('PUT /api/books/:id - Updating book with id:', req.params.id, 'data:', req.body);
+    (0, cache_middleware_1.clearCache)('search:*')(req, res, next);
+}, book_controller_1.BookController.updateBook);
+router.delete('/:id', auth_middleware_1.authenticateToken, (req, res, next) => {
+    console.log('DELETE /api/books/:id - Deleting book with id:', req.params.id);
+    (0, cache_middleware_1.clearCache)('search:*')(req, res, next);
+}, book_controller_1.BookController.deleteBook);

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { DashboardHeader } from "@/components/dashboard-header";
+import { useEffect, useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+
 import { BookList } from "@/components/book-list";
 import { AddBookForm } from "@/components/add-book-form";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toaster } from "@/components/ui/toaster";
 import { toast } from "@/components/ui/use-toast";
 import { BookSearch } from "@/components/book-search";
-import type { Book, SearchParams, User } from "@/lib/types";
+import type { Book } from "@/hooks/useBooks";
 import { BookPlus, BookOpen, Users } from "lucide-react";
 import { useUser } from "@/hooks/useAuth";
 import {
@@ -18,16 +18,29 @@ import {
   useCreateBook,
   useUpdateBook,
   useDeleteBook,
+  SearchParams,
 } from "@/hooks/useBooks";
+import { Pagination } from "@/components/ui/pagination";
 
-export default function Dashboard() {
+function DashboardContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: user, isLoading: isLoadingUser } = useUser();
-  const { data: books = [], isLoading: isLoadingBooks } = useBooks();
+  const [searchParamsState, setSearchParamsState] = useState<SearchParams>({
+    page: 1,
+    limit: 10,
+    isAvailable: true,
+    query: searchParams.get("query") || "",
+  });
+
+  const { data: booksData, isLoading: isLoadingBooks } =
+    useBooks(searchParamsState);
+  const books = booksData?.books || [];
+  const pagination = booksData?.pagination;
+
   const createBook = useCreateBook();
   const updateBook = useUpdateBook();
   const deleteBook = useDeleteBook();
-  const [filteredBooks, setFilteredBooks] = useState<Book[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
 
   useEffect(() => {
@@ -37,19 +50,41 @@ export default function Dashboard() {
   }, [user, isLoadingUser, router]);
 
   useEffect(() => {
-    if (books) {
-      setFilteredBooks(books);
+    // Update search params when URL query changes
+    const query = searchParams.get("query");
+    if (query !== searchParamsState.query) {
+      setSearchParamsState((prev) => ({
+        ...prev,
+        query: query || "",
+        page: 1, // Reset to first page on new search
+      }));
     }
-  }, [books]);
+  }, [searchParams, searchParamsState.query]);
+
+  const handleSearch = (params: SearchParams) => {
+    setSearchParamsState({
+      ...params,
+      page: 1, // Reset to first page on new search
+    });
+  };
+
+  const handlePageChange = (page: number) => {
+    setSearchParamsState((prev) => ({
+      ...prev,
+      page,
+    }));
+  };
 
   const handleAddBook = async (newBook: Book) => {
     try {
+      if (!user) return; // Early return if user is not available
+
       await createBook.mutateAsync({
         title: newBook.title,
         author: newBook.author,
         genre: newBook.genre,
         location: newBook.location,
-        contactInfo: newBook.contactInfo,
+        contactInfo: user.email,
       });
       setShowAddForm(false);
       toast({
@@ -63,34 +98,6 @@ export default function Dashboard() {
         variant: "destructive",
       });
     }
-  };
-
-  const handleSearch = (searchParams: SearchParams) => {
-    let results = [...books];
-
-    if (searchParams.query) {
-      const query = searchParams.query.toLowerCase();
-      results = results.filter(
-        (book) =>
-          book.title.toLowerCase().includes(query) ||
-          book.author.toLowerCase().includes(query)
-      );
-    }
-
-    if (searchParams.location) {
-      const location = searchParams.location.toLowerCase();
-      results = results.filter((book) =>
-        book.location.toLowerCase().includes(location)
-      );
-    }
-
-    if (searchParams.genre && searchParams.genre !== "all") {
-      results = results.filter((book) =>
-        book.genre?.toLowerCase().includes(searchParams.genre.toLowerCase())
-      );
-    }
-
-    setFilteredBooks(results);
   };
 
   const handleToggleStatus = async (bookId: string) => {
@@ -132,6 +139,17 @@ export default function Dashboard() {
     }
   };
 
+  const handleResetSearch = () => {
+    setSearchParamsState({
+      page: 1,
+      limit: 10,
+      isAvailable: true,
+      query: "",
+    });
+    // Clear the URL query parameter
+    router.push("/dashboard");
+  };
+
   if (isLoadingUser || !user) {
     return <div className="p-8 text-center">Loading...</div>;
   }
@@ -141,7 +159,6 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <Toaster />
-      <DashboardHeader user={user} />
 
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="browse" className="w-full">
@@ -159,24 +176,67 @@ export default function Dashboard() {
           </TabsList>
 
           <TabsContent value="browse" className="space-y-6">
-            <BookSearch onSearch={handleSearch} />
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Search Books</h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleResetSearch}
+                className="flex items-center"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="mr-2"
+                >
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                  <path d="M3 3v5h5"></path>
+                </svg>
+                Reset Search
+              </Button>
+            </div>
+            <BookSearch
+              onSearch={handleSearch}
+              initialParams={searchParamsState}
+            />
 
             <div className="mt-8">
               <h2 className="text-2xl font-semibold mb-4 flex items-center">
                 <BookOpen className="mr-2 h-5 w-5 text-primary" />
                 Available Books
                 <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  ({filteredBooks.length}{" "}
-                  {filteredBooks.length === 1 ? "book" : "books"} found)
+                  ({books.length} {books.length === 1 ? "book" : "books"} found)
                 </span>
               </h2>
-              <BookList
-                books={filteredBooks}
-                currentUser={user}
-                onToggleStatus={handleToggleStatus}
-                onDeleteBook={handleDeleteBook}
-                viewMode="browse"
-              />
+
+              {isLoadingBooks ? (
+                <div className="text-center py-8">Loading books...</div>
+              ) : books.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No books found matching your criteria
+                </div>
+              ) : (
+                <>
+                  <BookList books={books} currentUser={user} viewMode="grid" />
+
+                  {pagination && pagination.totalPages > 1 && (
+                    <div className="mt-6 flex justify-center">
+                      <Pagination
+                        currentPage={pagination.currentPage}
+                        totalPages={pagination.totalPages}
+                        onPageChange={handlePageChange}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </TabsContent>
 
@@ -204,24 +264,41 @@ export default function Dashboard() {
 
               {showAddForm && (
                 <AddBookForm
-                  onAddBook={handleAddBook}
-                  ownerId={user.id}
-                  ownerName={user.name}
-                  ownerContact={user.email}
+                  onSuccess={() => {
+                    setShowAddForm(false);
+                    toast({
+                      title: "Success",
+                      description: "Book added successfully!",
+                    });
+                  }}
                 />
               )}
 
-              <BookList
-                books={userBooks}
-                currentUser={user}
-                onToggleStatus={handleToggleStatus}
-                onDeleteBook={handleDeleteBook}
-                viewMode="manage"
-              />
+              {isLoadingBooks ? (
+                <div className="text-center py-8">Loading your books...</div>
+              ) : userBooks.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  You haven't added any books yet
+                </div>
+              ) : (
+                <BookList
+                  books={userBooks}
+                  currentUser={user}
+                  viewMode="grid"
+                />
+              )}
             </TabsContent>
           )}
         </Tabs>
       </main>
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }

@@ -30,6 +30,12 @@ model Book {
     updatedAt   DateTime @updatedAt
     owner       User     @relation(fields: [ownerId], references: [id])
     ownerId     String
+
+    @@index([title])
+    @@index([author])
+    @@index([genre])
+    @@index([location])
+    @@index([isAvailable])
 }
 
 enum Role {

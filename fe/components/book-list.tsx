@@ -1,144 +1,220 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import type { Book, User } from "@/lib/types"
-import { BookOpen, MapPin, Mail, Trash2, Phone, Calendar, Tag, Info } from "lucide-react"
-import { BookCover } from "@/components/book-cover"
+import { useState } from "react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  MapPin,
+  BookOpen,
+  User,
+  Mail,
+  Phone,
+  Trash2,
+  Edit,
+  Check,
+  X,
+} from "lucide-react";
+import { Book } from "@/hooks/useBooks";
+import { User as UserType } from "@/lib/types";
+import { EditBookForm } from "@/components/edit-book-form";
+import { useDeleteBook, useUpdateBook } from "@/hooks/useBooks";
+import { toast } from "@/components/ui/use-toast";
 
 interface BookListProps {
-  books: Book[]
-  currentUser: User
-  onToggleStatus: (bookId: string) => void
-  onDeleteBook: (bookId: string) => void
-  viewMode: "browse" | "manage"
+  books: Book[];
+  currentUser: UserType;
+  viewMode?: "grid" | "list";
 }
 
-export function BookList({ books, currentUser, onToggleStatus, onDeleteBook, viewMode }: BookListProps) {
-  if (books.length === 0) {
+export function BookList({
+  books,
+  currentUser,
+  viewMode = "grid",
+}: BookListProps) {
+  const [editingBook, setEditingBook] = useState<Book | null>(null);
+  const deleteBook = useDeleteBook();
+  const updateBook = useUpdateBook();
+
+  const handleEdit = (book: Book) => {
+    setEditingBook(book);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingBook(null);
+  };
+
+  const handleSaveEdit = () => {
+    setEditingBook(null);
+  };
+
+  const handleDelete = async (bookId: string) => {
+    try {
+      await deleteBook.mutateAsync(bookId);
+      toast({
+        title: "Success",
+        description: "Book deleted successfully!",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete book",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleToggleStatus = async (book: Book) => {
+    try {
+      await updateBook.mutateAsync({
+        id: book.id,
+        input: {
+          isAvailable: !book.isAvailable,
+        },
+      });
+      toast({
+        title: "Success",
+        description: `Book marked as ${
+          !book.isAvailable ? "available" : "unavailable"
+        }!`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update book status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (viewMode === "grid") {
     return (
-      <div className="text-center py-12 bg-gray-50 dark:bg-gray-950 rounded-lg border border-border">
-        <BookOpen className="mx-auto h-12 w-12 text-muted-foreground" />
-        <h3 className="mt-4 text-lg font-serif">No books found</h3>
-        <p className="mt-2 text-sm text-muted-foreground font-sans">
-          {viewMode === "manage"
-            ? "You haven't added any books yet."
-            : "There are no books available matching your criteria."}
-        </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {books.map((book) => (
+          <Card key={book.id} className="p-4">
+            {editingBook?.id === book.id ? (
+              <EditBookForm
+                book={book}
+                onSave={handleSaveEdit}
+                onCancel={handleCancelEdit}
+              />
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold">{book.title}</h3>
+                  <p className="text-sm text-gray-500">by {book.author}</p>
+                  {book.genre && (
+                    <Badge variant="secondary">{book.genre}</Badge>
+                  )}
+                  <p className="text-sm">Location: {book.location}</p>
+                  <p className="text-sm">Owner: {book.ownerName}</p>
+                  <Badge variant={book.isAvailable ? "default" : "secondary"}>
+                    {book.isAvailable ? "Available" : "Unavailable"}
+                  </Badge>
+                </div>
+                <div className="mt-4 flex justify-end space-x-2">
+                  {currentUser.id === book.ownerId && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleToggleStatus(book)}
+                      >
+                        {book.isAvailable
+                          ? "Mark Unavailable"
+                          : "Mark Available"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(book)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(book.id)}
+                      >
+                        Delete
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+          </Card>
+        ))}
       </div>
-    )
+    );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="space-y-4">
       {books.map((book) => (
-        <Card
-          key={book.id}
-          className="overflow-hidden border-2 hover:border-gray-300 dark:hover:border-gray-700 transition-colors"
-        >
-          <CardHeader className="pb-3 bg-gray-50 dark:bg-gray-950">
-            <div className="flex justify-between items-start">
-              <div>
-                <CardTitle className="text-xl line-clamp-1 font-serif">{book.title}</CardTitle>
-                <CardDescription className="line-clamp-1 font-sans">by {book.author}</CardDescription>
-              </div>
-              <Badge variant={book.isAvailable ? "default" : "secondary"} className="ml-2 flex-shrink-0 font-body">
-                {book.isAvailable ? "Available" : "Not Available"}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="pb-3 pt-4">
-            <div className="grid grid-cols-4 gap-4">
-              <div className="col-span-1">
-                <BookCover title={book.title} author={book.author} genre={book.genre} />
-              </div>
-              <div className="col-span-3 space-y-3">
-                {book.genre && (
-                  <div className="flex items-center text-sm font-sans">
-                    <Tag className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <span className="capitalize">{book.genre}</span>
-                  </div>
-                )}
-                <div className="flex items-center text-sm font-sans">
-                  <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <span>{book.location}</span>
+        <Card key={book.id} className="p-4">
+          {editingBook?.id === book.id ? (
+            <EditBookForm
+              book={book}
+              onSave={handleSaveEdit}
+              onCancel={handleCancelEdit}
+            />
+          ) : (
+            <>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h3 className="text-lg font-semibold">{book.title}</h3>
+                  <p className="text-sm text-gray-500">by {book.author}</p>
+                  {book.genre && (
+                    <Badge variant="secondary">{book.genre}</Badge>
+                  )}
+                  <p className="text-sm">Location: {book.location}</p>
+                  <p className="text-sm">Owner: {book.ownerName}</p>
                 </div>
-                <div className="flex items-center text-sm font-sans">
-                  <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-                  <span>Added {new Date(book.createdAt).toLocaleDateString()}</span>
-                </div>
-                {book.description && (
-                  <div className="pt-2">
-                    <p className="text-sm line-clamp-2 font-sans">{book.description}</p>
-                  </div>
-                )}
-                <div className="pt-2 border-t mt-3">
-                  <h4 className="text-sm font-serif mb-2 flex items-center">
-                    <Info className="h-4 w-4 mr-1 text-muted-foreground" />
-                    Owner Details:
-                  </h4>
-                  <p className="text-sm font-medium font-sans">{book.ownerName}</p>
-                  <div className="flex items-center text-sm mt-1 font-sans">
-                    <Mail className="mr-2 h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{book.ownerContact}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-between pt-2 border-t bg-gray-50 dark:bg-gray-950">
-            {viewMode === "manage" && book.ownerId === currentUser.id ? (
-              <>
-                <Button variant="outline" size="sm" className="font-body">
-                  Mark as {book.isAvailable ? "Unavailable" : "Available"}
-                </Button>
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button variant="destructive" size="icon">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle className="font-serif">Delete Book</DialogTitle>
-                      <DialogDescription className="font-sans">
-                        Are you sure you want to delete "{book.title}"? This action cannot be undone.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => {}} className="font-body">
-                        Cancel
+                <div className="flex items-center space-x-4">
+                  <Badge variant={book.isAvailable ? "default" : "secondary"}>
+                    {book.isAvailable ? "Available" : "Unavailable"}
+                  </Badge>
+                  {currentUser.id === book.ownerId && (
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleToggleStatus(book)}
+                      >
+                        {book.isAvailable
+                          ? "Mark Unavailable"
+                          : "Mark Available"}
                       </Button>
-                      <Button variant="destructive" onClick={() => onDeleteBook(book.id)} className="font-body">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEdit(book)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(book.id)}
+                      >
                         Delete
                       </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </>
-            ) : (
-              <Button
-                variant="default"
-                size="sm"
-                className="w-full bg-black text-white dark:bg-white dark:text-black font-body"
-              >
-                <Phone className="h-4 w-4 mr-2" />
-                Contact Owner
-              </Button>
-            )}
-          </CardFooter>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </Card>
       ))}
     </div>
-  )
+  );
 }
