@@ -26,19 +26,26 @@ export default function Register() {
   const register = useRegister();
   const defaultRole = (searchParams.get("role") || "SEEKER").toUpperCase();
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    email: string;
+    mobile: string;
+    password: string;
+    confirmPassword: string;
+    role: "OWNER" | "SEEKER";
+  }>({
     name: "",
     email: "",
     mobile: "",
     password: "",
     confirmPassword: "",
-    role: defaultRole,
+    role: defaultRole as "OWNER" | "SEEKER",
   });
 
   useEffect(() => {
     setFormData((prev) => ({
       ...prev,
-      role: defaultRole,
+      role: defaultRole as "OWNER" | "SEEKER",
     }));
   }, [defaultRole]);
 
@@ -50,10 +57,10 @@ export default function Register() {
     }));
   };
 
-  const handleRoleChange = (value: string) => {
+  const handleRoleChange = (value: "OWNER" | "SEEKER") => {
     setFormData((prev) => ({
       ...prev,
-      role: value.toUpperCase(),
+      role: value,
     }));
   };
 
