@@ -31,7 +31,7 @@ This project is containerized using Docker and Docker Compose. The setup include
 
 3. Access the application:
    - Frontend: http://localhost:3000
-   - Backend API: http://localhost:4000
+   - Backend API: http://localhost:3001
 
 ### Development
 
@@ -40,8 +40,8 @@ For development, you can run the services individually:
 ```bash
 # Frontend
 cd fe
-npm install
-npm run dev
+bun install
+bun run dev
 
 # Backend
 cd be
@@ -55,7 +55,7 @@ The application uses environment variables for configuration. In the Docker setu
 
 #### Frontend (.env)
 ```
-NEXT_PUBLIC_API_URL=http://localhost:4000
+NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
 
 #### Backend (.env)
@@ -78,6 +78,13 @@ docker-compose exec backend npx prisma migrate deploy
 cd be
 npx prisma migrate dev
 ```
+
+### Production
+
+```bash
+docker-compose up --buil -d
+```
+
 
 ### Stopping the Application
 
