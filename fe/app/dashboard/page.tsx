@@ -31,12 +31,27 @@ function DashboardContent() {
     limit: 10,
     isAvailable: true,
     query: searchParams.get("query") || "",
+    location: searchParams.get("location") || "",
+    genre: searchParams.get("genre") || "all",
   });
 
   const { data: booksData, isLoading: isLoadingBooks } =
     useBooks(searchParamsState);
-  const books = booksData?.books || [];
-  const pagination = booksData?.pagination;
+
+  console.log("Books data from API:", booksData);
+
+  // Make sure we handle both formats - array or object with books property
+  const books = Array.isArray(booksData) ? booksData : booksData?.books || [];
+
+  const pagination = Array.isArray(booksData)
+    ? {
+        totalItems: booksData.length,
+        currentPage: searchParamsState.page || 1,
+        pageSize: searchParamsState.limit || 10,
+        totalPages: 1,
+        hasMore: false,
+      }
+    : booksData?.pagination;
 
   const createBook = useCreateBook();
   const updateBook = useUpdateBook();
@@ -51,21 +66,58 @@ function DashboardContent() {
 
   useEffect(() => {
     // Update search params when URL query changes
-    const query = searchParams.get("query");
-    if (query !== searchParamsState.query) {
+    const queryParam = searchParams.get("query");
+    const locationParam = searchParams.get("location");
+    const genreParam = searchParams.get("genre");
+
+    // Check if any URL parameters have changed
+    const hasChanged =
+      queryParam !== searchParamsState.query ||
+      locationParam !== searchParamsState.location ||
+      genreParam !== searchParamsState.genre;
+
+    if (hasChanged) {
+      console.log("URL search params changed:", {
+        queryParam,
+        locationParam,
+        genreParam,
+      });
       setSearchParamsState((prev) => ({
         ...prev,
-        query: query || "",
+        query: queryParam || "",
+        location: locationParam || "",
+        genre: genreParam || "all",
         page: 1, // Reset to first page on new search
       }));
     }
-  }, [searchParams, searchParamsState.query]);
+  }, [
+    searchParams,
+    searchParamsState.query,
+    searchParamsState.location,
+    searchParamsState.genre,
+  ]);
 
   const handleSearch = (params: SearchParams) => {
+    // Update search params state
     setSearchParamsState({
       ...params,
       page: 1, // Reset to first page on new search
     });
+
+    console.log("Performing search with:", params);
+
+    // Update URL with search params
+    const searchUrl = new URLSearchParams();
+    if (params.query) searchUrl.set("query", params.query);
+    if (params.location) searchUrl.set("location", params.location);
+    if (params.genre && params.genre !== "all")
+      searchUrl.set("genre", params.genre);
+
+    const queryString = searchUrl.toString();
+    const url = queryString ? `/dashboard?${queryString}` : "/dashboard";
+
+    // Update URL without full page reload
+    router.push(url, { scroll: false });
   };
 
   const handlePageChange = (page: number) => {
@@ -85,6 +137,8 @@ function DashboardContent() {
         genre: newBook.genre,
         location: newBook.location,
         contactInfo: user.email,
+        imageUrl: newBook.imageUrl,
+        imageKey: newBook.imageKey,
       });
       setShowAddForm(false);
       toast({
@@ -140,14 +194,22 @@ function DashboardContent() {
   };
 
   const handleResetSearch = () => {
-    setSearchParamsState({
+    const resetParams = {
       page: 1,
       limit: 10,
       isAvailable: true,
       query: "",
-    });
-    // Clear the URL query parameter
-    router.push("/dashboard");
+      location: "",
+      genre: "all",
+    };
+
+    // Update search params state
+    setSearchParamsState(resetParams);
+
+    console.log("Dashboard: Search reset to:", resetParams);
+
+    // Clear the URL query parameter and navigate
+    router.push("/dashboard", { scroll: false });
   };
 
   if (isLoadingUser || !user) {

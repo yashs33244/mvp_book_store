@@ -5,16 +5,23 @@ services:
     build:
       context: ./fe
       dockerfile: Dockerfile
+      args:
+        # Pass build-time arguments
+        NEXT_PUBLIC_API_URL: https://apibooks.yashprojects.online
+        NODE_ENV: production
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://backend:3001
+      # Runtime environment variables
+      - NEXT_PUBLIC_API_URL=https://apibooks.yashprojects.online
       - NODE_ENV=production
     depends_on:
       backend:
         condition: service_healthy
     networks:
       - app-network
+    container_name: bookexchange-frontend
+    restart: unless-stopped
 
   backend:
     build:
@@ -28,6 +35,12 @@ services:
       - JWT_SECRET=your_jwt_secret_key
       - NODE_ENV=production
       - PORT=3001
+      - AWS_ACCESS_KEY_ID=your_aws_access_key
+      - AWS_SECRET_ACCESS_KEY=your_aws_secret_key
+      - AWS_REGION=your_aws_region
+      - AWS_S3_BUCKET=your_s3_bucket_name
+      # Add environment variables for CORS
+      - CORS_ALLOWED_ORIGIN=https://books.yashprojects.online
     depends_on:
       db:
         condition: service_healthy
@@ -41,6 +54,8 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+    container_name: bookexchange-backend
+    restart: unless-stopped
 
   db:
     image: postgres:16-alpine
@@ -60,6 +75,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    container_name: bookexchange-postgres
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -75,6 +92,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    container_name: bookexchange-redis
+    restart: unless-stopped
 
 volumes:
   postgres-data:

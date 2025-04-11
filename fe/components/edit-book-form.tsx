@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +14,11 @@ import {
 import { Book } from "@/hooks/useBooks";
 import { useUpdateBook } from "@/hooks/useBooks";
 import { toast } from "@/components/ui/use-toast";
+import { Image, X } from "lucide-react";
+import { useDropzone } from "react-dropzone";
+import { useImageUpload } from "@/lib/useImageUpload";
+import { useClientOnly } from "@/lib/useClientOnly";
+import { isAuthenticated } from "@/lib/api";
 
 interface EditBookFormProps {
   book: Book;
@@ -22,14 +27,61 @@ interface EditBookFormProps {
 }
 
 export function EditBookForm({ book, onSave, onCancel }: EditBookFormProps) {
+  // Wait for client-side rendering
+  const isClient = useClientOnly();
+
   const [formData, setFormData] = useState({
     title: book.title,
     author: book.author,
     genre: book.genre || "",
     location: book.location,
+    imageUrl: book.imageUrl || "",
+    imageKey: book.imageKey || "",
   });
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    book.imageUrl || null
+  );
 
   const updateBook = useUpdateBook();
+
+  // Use our custom image upload hook
+  const { uploadImage, isUploading, resetUpload } = useImageUpload({
+    onUploadSuccess: (imageUrl, imageKey) => {
+      setFormData((prev) => ({
+        ...prev,
+        imageUrl,
+        imageKey,
+      }));
+    },
+  });
+
+  // Handle file drop
+  const onDrop = useCallback(
+    async (acceptedFiles: File[]) => {
+      const file = acceptedFiles[0];
+      if (!file) return;
+
+      try {
+        // Upload the image using our custom hook
+        await uploadImage(file);
+
+        // Set preview image
+        setImagePreview(URL.createObjectURL(file));
+      } catch (error) {
+        console.error("Failed to upload image:", error);
+      }
+    },
+    [uploadImage]
+  );
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      "image/*": [".jpeg", ".jpg", ".png", ".gif"],
+    },
+    maxFiles: 1,
+    disabled: isUploading,
+  });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -64,11 +116,37 @@ export function EditBookForm({ book, onSave, onCancel }: EditBookFormProps) {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to update book",
+        description: "Failed to update book. Please ensure you're logged in.",
         variant: "destructive",
       });
     }
   };
+
+  const removeImage = () => {
+    setImagePreview(null);
+    setFormData((prev) => ({
+      ...prev,
+      imageUrl: "",
+      imageKey: "",
+    }));
+  };
+
+  // Check authentication on component mount
+  useEffect(() => {
+    // Only run on client-side
+    if (isClient && !isAuthenticated()) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to edit books.",
+        variant: "destructive",
+      });
+    }
+  }, [isClient]);
+
+  // Don't render until client-side is ready
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -127,11 +205,62 @@ export function EditBookForm({ book, onSave, onCancel }: EditBookFormProps) {
         />
       </div>
 
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">Book Cover Image</Label>
+        {imagePreview ? (
+          <div className="relative w-40 h-60 border border-gray-200 rounded-md overflow-hidden">
+            <img
+              src={imagePreview}
+              alt="Book cover preview"
+              className="object-cover w-full h-full"
+            />
+            <Button
+              variant="destructive"
+              size="icon"
+              className="absolute top-2 right-2 w-6 h-6 rounded-full"
+              onClick={removeImage}
+              type="button"
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        ) : (
+          <div
+            {...getRootProps()}
+            className={`border-2 border-dashed rounded-md p-8 text-center cursor-pointer transition-colors
+              ${
+                isDragActive
+                  ? "border-primary bg-primary/5"
+                  : "border-gray-300 hover:border-primary/50"
+              }`}
+          >
+            <input {...getInputProps()} />
+            <div className="flex flex-col items-center justify-center gap-2">
+              <Image className="h-8 w-8 text-gray-400" />
+              {isUploading ? (
+                <p>Uploading...</p>
+              ) : isDragActive ? (
+                <p>Drop the image here ...</p>
+              ) : (
+                <div>
+                  <p className="text-sm text-gray-500">
+                    Drag & drop a book cover image here, or click to select one
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Supports: JPG, PNG, GIF
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="flex justify-end space-x-2 pt-2">
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" disabled={updateBook.isPending}>
+        <Button type="submit" disabled={updateBook.isPending || isUploading}>
           {updateBook.isPending ? "Saving..." : "Save Changes"}
         </Button>
       </div>

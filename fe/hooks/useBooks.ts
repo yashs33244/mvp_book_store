@@ -1,6 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
+// Define owner interface to match backend response
+interface BookOwner {
+  id: string;
+  name: string;
+  email: string;
+  mobile: string;
+}
+
 export interface Book {
   id: string;
   title: string;
@@ -9,9 +17,14 @@ export interface Book {
   location: string;
   isAvailable: boolean;
   ownerId: string;
-  ownerName: string;
-  ownerEmail: string;
-  ownerMobile: string;
+  // These can come directly from the API or need to be derived from owner object
+  ownerName?: string;
+  ownerEmail?: string;
+  ownerMobile?: string;
+  // The owner object might be included in the API response
+  owner?: BookOwner;
+  imageUrl?: string;
+  imageKey?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -22,6 +35,8 @@ export interface CreateBookInput {
   genre?: string;
   location: string;
   contactInfo: string;
+  imageUrl?: string;
+  imageKey?: string;
 }
 
 export interface UpdateBookInput {
@@ -30,6 +45,8 @@ export interface UpdateBookInput {
   genre?: string;
   location?: string;
   isAvailable?: boolean;
+  imageUrl?: string;
+  imageKey?: string;
 }
 
 export interface SearchParams {
@@ -70,6 +87,7 @@ export function useBooks(params: SearchParams = {}) {
       
       try {
         const response = await api.get(url);
+        
         // If the response is null or empty, return a default structure
         if (!response.data) {
           return {
@@ -83,6 +101,31 @@ export function useBooks(params: SearchParams = {}) {
             }
           };
         }
+        
+        // Handle case when API returns array directly instead of object with books and pagination
+        if (Array.isArray(response.data)) {
+          console.log('API returned array directly, adapting format');
+          
+          // Transform books to ensure consistent format
+          const transformedBooks = response.data.map(book => formatBookData(book));
+          
+          return {
+            books: transformedBooks,
+            pagination: {
+              totalItems: response.data.length,
+              currentPage: params.page || 1,
+              pageSize: params.limit || 10,
+              totalPages: 1,
+              hasMore: false
+            }
+          };
+        }
+        
+        // Transform books in the standard response format
+        if (response.data.books) {
+          response.data.books = response.data.books.map((book:any) => formatBookData(book));
+        }
+        
         return response.data;
       } catch (error) {
         console.error('Error fetching books:', error);
@@ -100,6 +143,30 @@ export function useBooks(params: SearchParams = {}) {
       }
     },
   });
+}
+
+// Updated to use explicit typing
+function formatBookData(book: unknown): Book {
+  const bookData = book as any;
+  const formattedBook: Book = {
+    ...bookData,
+    id: bookData.id,
+    title: bookData.title,
+    author: bookData.author,
+    genre: bookData.genre,
+    location: bookData.location,
+    isAvailable: bookData.isAvailable,
+    ownerId: bookData.ownerId,
+    ownerName: bookData.ownerName || (bookData.owner ? bookData.owner.name : undefined),
+    ownerEmail: bookData.ownerEmail || (bookData.owner ? bookData.owner.email : undefined),
+    ownerMobile: bookData.ownerMobile || (bookData.owner ? bookData.owner.mobile : undefined),
+    imageUrl: bookData.imageUrl,
+    imageKey: bookData.imageKey,
+    createdAt: bookData.createdAt,
+    updatedAt: bookData.updatedAt
+  };
+  
+  return formattedBook;
 }
 
 export function useCreateBook() {

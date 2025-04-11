@@ -14,6 +14,7 @@ exports.BookService = void 0;
 const client_1 = require("@prisma/client");
 const search_utils_1 = require("../utils/search.utils");
 const cache_service_1 = require("./cache.service");
+const book_controller_1 = require("../controllers/book.controller");
 const prisma = new client_1.PrismaClient();
 class BookService {
     /**
@@ -35,22 +36,8 @@ class BookService {
             if (cachedResult) {
                 return cachedResult;
             }
-            // Get books from database
-            const books = yield prisma.book.findMany({
-                where: filterConditions,
-                skip,
-                take,
-                orderBy: { createdAt: 'desc' },
-                include: {
-                    owner: {
-                        select: {
-                            id: true,
-                            name: true,
-                            email: true,
-                        },
-                    },
-                },
-            });
+            // Get books from database using controller
+            const books = yield book_controller_1.BookController.listBooks({ query: normalizedParams }, null);
             const result = { books, total };
             // Cache the result
             yield cache_service_1.CacheService.set(cacheKey, result, 300);
@@ -63,19 +50,7 @@ class BookService {
     static getBookById(id) {
         return __awaiter(this, void 0, void 0, function* () {
             console.log('BookService.getBookById called with id:', id);
-            return prisma.book.findUnique({
-                where: { id },
-                include: {
-                    owner: {
-                        select: {
-                            id: true,
-                            name: true,
-                            email: true,
-                            mobile: true
-                        }
-                    }
-                }
-            });
+            return book_controller_1.BookController.getBook({ params: { id } }, null);
         });
     }
     /**
@@ -84,18 +59,7 @@ class BookService {
     static createBook(data) {
         return __awaiter(this, void 0, void 0, function* () {
             console.log('BookService.createBook called with data:', JSON.stringify(data));
-            const book = yield prisma.book.create({
-                data,
-                include: {
-                    owner: {
-                        select: {
-                            id: true,
-                            name: true
-                        }
-                    }
-                }
-            });
-            console.log('Book created successfully:', book.id);
+            const book = yield book_controller_1.BookController.createBook({ body: data }, null);
             // Clear books cache
             yield cache_service_1.CacheService.clearPattern('search:type:books*');
             console.log('Cache cleared for books');
@@ -108,19 +72,10 @@ class BookService {
     static updateBook(id, data) {
         return __awaiter(this, void 0, void 0, function* () {
             console.log('BookService.updateBook called with id:', id, 'data:', JSON.stringify(data));
-            const book = yield prisma.book.update({
-                where: { id },
-                data,
-                include: {
-                    owner: {
-                        select: {
-                            id: true,
-                            name: true
-                        }
-                    }
-                }
-            });
-            console.log('Book updated successfully:', book.id);
+            const book = yield book_controller_1.BookController.updateBook({
+                params: { id },
+                body: data
+            }, null);
             // Clear books cache
             yield cache_service_1.CacheService.clearPattern('search:type:books*');
             console.log('Cache cleared for books');
@@ -133,8 +88,7 @@ class BookService {
     static deleteBook(id) {
         return __awaiter(this, void 0, void 0, function* () {
             console.log('BookService.deleteBook called with id:', id);
-            const book = yield prisma.book.delete({ where: { id } });
-            console.log('Book deleted successfully:', book.id);
+            const book = yield book_controller_1.BookController.deleteBook({ params: { id } }, null);
             // Clear books cache
             yield cache_service_1.CacheService.clearPattern('search:type:books*');
             console.log('Cache cleared for books');
@@ -147,10 +101,7 @@ class BookService {
     static getBooksByOwner(ownerId) {
         return __awaiter(this, void 0, void 0, function* () {
             console.log('BookService.getBooksByOwner called with ownerId:', ownerId);
-            const books = yield prisma.book.findMany({
-                where: { ownerId },
-                orderBy: { updatedAt: 'desc' }
-            });
+            const books = yield book_controller_1.BookController.getUserBooks({ user: { id: ownerId } }, null);
             console.log('Found', books.length, 'books for owner:', ownerId);
             return books;
         });

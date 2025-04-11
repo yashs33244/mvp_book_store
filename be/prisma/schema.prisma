@@ -26,10 +26,12 @@ model Book {
     genre       String?
     location    String
     isAvailable Boolean  @default(true)
+    imageUrl    String? // URL to the book's image in S3
+    imageKey    String? // S3 key for the image
+    ownerId     String
+    owner       User     @relation(fields: [ownerId], references: [id])
     createdAt   DateTime @default(now())
     updatedAt   DateTime @updatedAt
-    owner       User     @relation(fields: [ownerId], references: [id])
-    ownerId     String
 
     @@index([title])
     @@index([author])

@@ -5,6 +5,7 @@ import { authenticateToken, isOwner } from '../middleware/auth.middleware';
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware';
 import { BookController } from '../controllers/book.controller';
 import { SearchController } from '../controllers/search.controller';
+import { S3Service } from '../services/s3.service';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -14,6 +15,60 @@ const bookSchema = z.object({
   author: z.string().min(1),
   genre: z.string().optional(),
   location: z.string().min(1),
+  imageUrl: z.string().optional(),
+  imageKey: z.string().optional(),
+});
+
+// File upload schema
+const fileUploadSchema = z.object({
+  fileType: z.string().refine(
+    (type) => type.startsWith('image/'), 
+    { message: 'Only image files are allowed' }
+  )
+});
+
+// Initialize S3 service
+S3Service.initialize();
+
+// Get presigned URL for image upload
+router.post('/upload-url', authenticateToken, async (req, res) => {
+  try {
+    console.log('POST /api/books/upload-url - Generating upload URL with fileType:', req.body.fileType);
+    
+    // Validate request body
+    const validationResult = fileUploadSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      console.error('Validation error:', validationResult.error);
+      return res.status(400).json({ 
+        message: 'Invalid request data', 
+        errors: validationResult.error.errors 
+      });
+    }
+    
+    const { fileType } = validationResult.data;
+    
+    // Check if S3 service is properly initialized
+    if (!S3Service.isInitialized()) {
+      console.error('S3 service not initialized');
+      return res.status(500).json({ 
+        message: 'S3 service not available. Please check server configuration.' 
+      });
+    }
+
+    const { uploadUrl, key } = await S3Service.generateUploadUrl(fileType);
+    
+    console.log('Generated upload URL successfully for key:', key);
+    res.json({ uploadUrl, key });
+  } catch (error) {
+    console.error('Error generating upload URL:', error);
+    
+    // Provide more detailed error message if available
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : 'Error generating upload URL';
+    
+    res.status(500).json({ message: errorMessage });
+  }
 });
 
 // Public endpoints with caching

@@ -21,19 +21,33 @@ interface BookSearchProps {
   initialParams?: SearchParams;
 }
 
+// Default values to ensure inputs are always controlled
+const defaultParams: SearchParams = {
+  query: "",
+  location: "",
+  genre: "all",
+  isAvailable: true,
+  page: 1,
+  limit: 10,
+};
+
 export function BookSearch({
   onSearch,
-  initialParams = {
-    page: 1,
-    limit: 10,
-    isAvailable: true,
-  },
+  initialParams = defaultParams,
 }: BookSearchProps) {
-  const [searchParams, setSearchParams] = useState<SearchParams>(initialParams);
+  // Ensure all fields have default values to avoid undefined
+  const [searchParams, setSearchParams] = useState<SearchParams>({
+    ...defaultParams,
+    ...initialParams,
+  });
 
   // Update local state when initialParams change (e.g., from URL)
   useEffect(() => {
-    setSearchParams(initialParams);
+    console.log("BookSearch initialParams changed:", initialParams);
+    setSearchParams({
+      ...defaultParams,
+      ...initialParams,
+    });
   }, [initialParams]);
 
   const handleChange = (
@@ -51,6 +65,7 @@ export function BookSearch({
     setSearchParams((prev) => ({
       ...prev,
       genre: value,
+      page: 1,
     }));
   };
 
@@ -58,6 +73,7 @@ export function BookSearch({
     setSearchParams((prev) => ({
       ...prev,
       isAvailable: value === "all" ? undefined : value === "true",
+      page: 1,
     }));
   };
 
@@ -67,14 +83,24 @@ export function BookSearch({
   };
 
   const handleReset = () => {
+    // Define completely clean reset params
     const resetParams = {
+      ...defaultParams,
       query: "",
       location: "",
       genre: "all",
       isAvailable: true,
+      page: 1,
+      limit: 10,
     };
+
+    // First update the local state
     setSearchParams(resetParams);
+
+    // Then trigger the search with reset parameters
     onSearch(resetParams);
+
+    console.log("Search reset to:", resetParams);
   };
 
   return (
@@ -98,7 +124,7 @@ export function BookSearch({
                   id="query"
                   name="query"
                   placeholder="Title, author, or keyword"
-                  value={searchParams.query}
+                  value={searchParams.query || ""}
                   onChange={handleChange}
                   className="pl-9"
                 />
@@ -115,7 +141,7 @@ export function BookSearch({
                   id="location"
                   name="location"
                   placeholder="City, State"
-                  value={searchParams.location}
+                  value={searchParams.location || ""}
                   onChange={handleChange}
                   className="pl-9"
                 />
@@ -127,7 +153,7 @@ export function BookSearch({
                 Genre
               </Label>
               <Select
-                value={searchParams.genre}
+                value={searchParams.genre || "all"}
                 onValueChange={handleGenreChange}
               >
                 <SelectTrigger className="w-full">
@@ -160,7 +186,13 @@ export function BookSearch({
               Availability
             </Label>
             <Select
-              value={searchParams.isAvailable ? "true" : "false"}
+              value={
+                searchParams.isAvailable === undefined
+                  ? "all"
+                  : searchParams.isAvailable
+                  ? "true"
+                  : "false"
+              }
               onValueChange={handleAvailabilityChange}
             >
               <SelectTrigger className="w-full">
@@ -170,6 +202,7 @@ export function BookSearch({
                 </div>
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Books</SelectItem>
                 <SelectItem value="true">Available</SelectItem>
                 <SelectItem value="false">Unavailable</SelectItem>
               </SelectContent>
