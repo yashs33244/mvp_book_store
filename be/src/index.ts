@@ -18,6 +18,12 @@ const port = process.env.PORT || 3001;
 // Security middleware
 
 
+app.use(cors({
+  origin: ['http://books.yashprojects.online', 'https://books.yashprojects.online'], 
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 // Logging middleware
 app.use(morgan('dev'));
 
@@ -27,7 +33,6 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(cors());
 app.use(express.json());
 
 // Routes
