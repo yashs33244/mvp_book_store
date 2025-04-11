@@ -29,21 +29,44 @@ const bookSchema = zod_1.z.object({
     imageUrl: zod_1.z.string().optional(),
     imageKey: zod_1.z.string().optional(),
 });
+// File upload schema
+const fileUploadSchema = zod_1.z.object({
+    fileType: zod_1.z.string().refine((type) => type.startsWith('image/'), { message: 'Only image files are allowed' })
+});
 // Initialize S3 service
 s3_service_1.S3Service.initialize();
 // Get presigned URL for image upload
 router.post('/upload-url', auth_middleware_1.authenticateToken, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { fileType } = req.body;
-        if (!fileType) {
-            return res.status(400).json({ message: 'File type is required' });
+        console.log('POST /api/books/upload-url - Generating upload URL with fileType:', req.body.fileType);
+        // Validate request body
+        const validationResult = fileUploadSchema.safeParse(req.body);
+        if (!validationResult.success) {
+            console.error('Validation error:', validationResult.error);
+            return res.status(400).json({
+                message: 'Invalid request data',
+                errors: validationResult.error.errors
+            });
+        }
+        const { fileType } = validationResult.data;
+        // Check if S3 service is properly initialized
+        if (!s3_service_1.S3Service.isInitialized()) {
+            console.error('S3 service not initialized');
+            return res.status(500).json({
+                message: 'S3 service not available. Please check server configuration.'
+            });
         }
         const { uploadUrl, key } = yield s3_service_1.S3Service.generateUploadUrl(fileType);
+        console.log('Generated upload URL successfully for key:', key);
         res.json({ uploadUrl, key });
     }
     catch (error) {
         console.error('Error generating upload URL:', error);
-        res.status(500).json({ message: 'Error generating upload URL' });
+        // Provide more detailed error message if available
+        const errorMessage = error instanceof Error
+            ? error.message
+            : 'Error generating upload URL';
+        res.status(500).json({ message: errorMessage });
     }
 }));
 // Public endpoints with caching

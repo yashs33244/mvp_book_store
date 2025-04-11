@@ -2,6 +2,7 @@
 import { PrismaClient, Book, Prisma } from '@prisma/client';
 import { SearchParams, normalizeSearchParams, buildPaginationInfo } from '../utils/search.utils';
 import { CacheService } from './cache.service';
+import { BookController } from '../controllers/book.controller';
 
 const prisma = new PrismaClient();
 
@@ -31,23 +32,9 @@ export class BookService {
       return cachedResult;
     }
 
-    // Get books from database
-    const books = await prisma.book.findMany({
-      where: filterConditions,
-      skip,
-      take,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        owner: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-    });
-
+    // Get books from database using controller
+    const books = await BookController.listBooks({ query: normalizedParams } as any, null as any);
+    
     const result = { books, total };
     
     // Cache the result
@@ -59,41 +46,17 @@ export class BookService {
   /**
    * Get book by ID
    */
-  static async getBookById(id: string) {
+  static async getBookById(id: string): Promise<Book | null> {
     console.log('BookService.getBookById called with id:', id);
-    return prisma.book.findUnique({
-      where: { id },
-      include: {
-        owner: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            mobile: true
-          }
-        }
-      }
-    });
+    return BookController.getBook({ params: { id } } as any, null as any);
   }
   
   /**
    * Create new book
    */
-  static async createBook(data: Prisma.BookCreateInput) {
+  static async createBook(data: Prisma.BookCreateInput): Promise<Book> {
     console.log('BookService.createBook called with data:', JSON.stringify(data));
-    const book = await prisma.book.create({
-      data,
-      include: {
-        owner: {
-          select: {
-            id: true,
-            name: true
-          }
-        }
-      }
-    });
-    
-    console.log('Book created successfully:', book.id);
+    const book = await BookController.createBook({ body: data } as any, null as any);
     
     // Clear books cache
     await CacheService.clearPattern('search:type:books*');
@@ -105,22 +68,12 @@ export class BookService {
   /**
    * Update book
    */
-  static async updateBook(id: string, data: Prisma.BookUpdateInput) {
+  static async updateBook(id: string, data: Prisma.BookUpdateInput): Promise<Book> {
     console.log('BookService.updateBook called with id:', id, 'data:', JSON.stringify(data));
-    const book = await prisma.book.update({
-      where: { id },
-      data,
-      include: {
-        owner: {
-          select: {
-            id: true,
-            name: true
-          }
-        }
-      }
-    });
-    
-    console.log('Book updated successfully:', book.id);
+    const book = await BookController.updateBook({ 
+      params: { id }, 
+      body: data 
+    } as any, null as any);
     
     // Clear books cache
     await CacheService.clearPattern('search:type:books*');
@@ -132,11 +85,9 @@ export class BookService {
   /**
    * Delete book
    */
-  static async deleteBook(id: string) {
+  static async deleteBook(id: string): Promise<Book> {
     console.log('BookService.deleteBook called with id:', id);
-    const book = await prisma.book.delete({ where: { id } });
-    
-    console.log('Book deleted successfully:', book.id);
+    const book = await BookController.deleteBook({ params: { id } } as any, null as any);
     
     // Clear books cache
     await CacheService.clearPattern('search:type:books*');
@@ -148,12 +99,9 @@ export class BookService {
   /**
    * Get books by owner
    */
-  static async getBooksByOwner(ownerId: string) {
+  static async getBooksByOwner(ownerId: string): Promise<Book[]> {
     console.log('BookService.getBooksByOwner called with ownerId:', ownerId);
-    const books = await prisma.book.findMany({
-      where: { ownerId },
-      orderBy: { updatedAt: 'desc' }
-    });
+    const books = await BookController.getUserBooks({ user: { id: ownerId } } as any, null as any);
     
     console.log('Found', books.length, 'books for owner:', ownerId);
     return books;

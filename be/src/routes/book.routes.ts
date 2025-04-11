@@ -19,22 +19,55 @@ const bookSchema = z.object({
   imageKey: z.string().optional(),
 });
 
+// File upload schema
+const fileUploadSchema = z.object({
+  fileType: z.string().refine(
+    (type) => type.startsWith('image/'), 
+    { message: 'Only image files are allowed' }
+  )
+});
+
 // Initialize S3 service
 S3Service.initialize();
 
 // Get presigned URL for image upload
 router.post('/upload-url', authenticateToken, async (req, res) => {
   try {
-    const { fileType } = req.body;
-    if (!fileType) {
-      return res.status(400).json({ message: 'File type is required' });
+    console.log('POST /api/books/upload-url - Generating upload URL with fileType:', req.body.fileType);
+    
+    // Validate request body
+    const validationResult = fileUploadSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      console.error('Validation error:', validationResult.error);
+      return res.status(400).json({ 
+        message: 'Invalid request data', 
+        errors: validationResult.error.errors 
+      });
+    }
+    
+    const { fileType } = validationResult.data;
+    
+    // Check if S3 service is properly initialized
+    if (!S3Service.isInitialized()) {
+      console.error('S3 service not initialized');
+      return res.status(500).json({ 
+        message: 'S3 service not available. Please check server configuration.' 
+      });
     }
 
     const { uploadUrl, key } = await S3Service.generateUploadUrl(fileType);
+    
+    console.log('Generated upload URL successfully for key:', key);
     res.json({ uploadUrl, key });
   } catch (error) {
     console.error('Error generating upload URL:', error);
-    res.status(500).json({ message: 'Error generating upload URL' });
+    
+    // Provide more detailed error message if available
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : 'Error generating upload URL';
+    
+    res.status(500).json({ message: errorMessage });
   }
 });
 
